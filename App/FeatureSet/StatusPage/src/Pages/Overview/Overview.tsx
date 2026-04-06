@@ -131,7 +131,9 @@ const Overview: FunctionComponent<PageComponentProps> = (
     scheduledMaintenanceStateTimelines,
     setScheduledMaintenanceStateTimelines,
   ] = useState<Array<ScheduledMaintenanceStateTimeline>>([]);
-  const uptimeHistoryDays: number = statusPage?.showUptimeHistoryInDays || 90;
+  const maxHistoryDays: number = statusPage?.showUptimeHistoryInDays || 365;
+  const [selectedDays, setSelectedDays] = useState<number>(90);
+  const uptimeHistoryDays: number = Math.min(selectedDays, maxHistoryDays);
   const startDate: Date = OneUptimeDate.getSomeDaysAgo(uptimeHistoryDays);
   const endDate: Date = OneUptimeDate.getCurrentDate();
   const [currentStatus, setCurrentStatus] = useState<MonitorStatus | null>(
@@ -862,6 +864,32 @@ const Overview: FunctionComponent<PageComponentProps> = (
               />
             )}
           </div>
+
+          {statusPageResources.length > 0 && (
+            <div className="flex justify-end mt-5 mb-0 gap-1">
+              {[30, 90, 365]
+                .filter((days: number) => {
+                  return days <= maxHistoryDays;
+                })
+                .map((days: number) => {
+                  return (
+                    <button
+                      key={days}
+                      onClick={() => {
+                        setSelectedDays(days);
+                      }}
+                      className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                        selectedDays === days
+                          ? "bg-gray-700 text-white border-gray-700"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {days}d
+                    </button>
+                  );
+                })}
+            </div>
+          )}
 
           {statusPageResources.length > 0 && (
             <div className="bg-white pl-3 pr-3 sm:pl-5 sm:pr-5 mt-5 rounded-xl shadow space-y-3 sm:space-y-5 mb-6">

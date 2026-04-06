@@ -12,6 +12,7 @@ export interface StatusDuration {
 
 export interface ComponentProps {
   date: Date;
+  endDate?: Date | undefined;
   uptimePercent: number;
   hasEvents: boolean;
   statusDurations: Array<StatusDuration>;
@@ -22,8 +23,20 @@ export interface ComponentProps {
 const UptimeBarTooltip: FunctionComponent<ComponentProps> = (
   props: ComponentProps,
 ): ReactElement => {
-  const dateStr: string =
+  const startDateStr: string =
     OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(props.date, true);
+
+  const showRange: boolean = Boolean(
+    props.endDate &&
+      OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(
+        props.endDate,
+        true,
+      ) !== startDateStr,
+  );
+
+  const dateStr: string = showRange
+    ? `${startDateStr} – ${OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(props.endDate!, true)}`
+    : startDateStr;
 
   // Color tiers
   const isGood: boolean = props.uptimePercent >= 99.9;

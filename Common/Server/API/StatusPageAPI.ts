@@ -1176,10 +1176,10 @@ export default class StatusPageAPI extends BaseAPI<
 
           if (
             OneUptimeDate.getDaysBetweenTwoDatesInclusive(startDate, endDate) >
-            90
+            365
           ) {
             throw new BadDataException(
-              "You can only get uptime for 90 days. Please select a date range within 90 days.",
+              "You can only get uptime for 365 days. Please select a date range within 365 days.",
             );
           }
 
@@ -1460,8 +1460,8 @@ export default class StatusPageAPI extends BaseAPI<
           let uptimeHistoryDays: number =
             statusPageForDays?.showUptimeHistoryInDays || 90;
 
-          if (uptimeHistoryDays > 90) {
-            uptimeHistoryDays = 90;
+          if (uptimeHistoryDays > 365) {
+            uptimeHistoryDays = 365;
           }
 
           if (uptimeHistoryDays < 1) {

@@ -68,6 +68,9 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
     });
   };
 
+  // Group bars when there are too many days to display clearly
+  const daysPerBar: number = days > 180 ? 3 : 1;
+
   type GetUptimeBarFunction = (dayNumber: number) => ReactElement;
 
   const getUptimeBar: GetUptimeBarFunction = (
@@ -80,8 +83,14 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
       dayNumber,
     );
 
+    // For grouped bars, the range covers multiple days
+    const lastDayInGroup: Date = OneUptimeDate.getSomeDaysAfterDate(
+      props.startDate,
+      Math.min(dayNumber + daysPerBar - 1, days - 1),
+    );
+
     const startOfTheDay: Date = OneUptimeDate.getStartOfDay(todaysDay);
-    const endOfTheDay: Date = OneUptimeDate.getEndOfDay(todaysDay);
+    const endOfTheDay: Date = OneUptimeDate.getEndOfDay(lastDayInGroup);
 
     const todaysEvents: Array<Event> = props.events.filter((event: Event) => {
       let doesEventBelongsToToday: boolean = false;
@@ -245,6 +254,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
         richContent={
           <UptimeBarTooltip
             date={todaysDay}
+            endDate={daysPerBar > 1 ? lastDayInGroup : undefined}
             uptimePercent={uptimePercentForTheDay}
             hasEvents={hasEvents}
             statusDurations={statusDurations}
@@ -275,7 +285,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
   const getUptimeGraph: GetUptimeGraphFunction = (): Array<ReactElement> => {
     const elements: Array<ReactElement> = [];
 
-    for (let i: number = 0; i < days; i++) {
+    for (let i: number = 0; i < days; i += daysPerBar) {
       elements.push(getUptimeBar(i));
     }
 

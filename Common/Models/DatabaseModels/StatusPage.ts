@@ -2664,12 +2664,12 @@ export default class StatusPage extends BaseModel {
     type: TableColumnType.Number,
     title: "Show Uptime History In Days",
     description:
-      "How many days of uptime history should be shown on the status page? Maximum is 90 days.",
-    defaultValue: 90,
+      "How many days of uptime history should be shown on the status page? Maximum is 365 days.",
+    defaultValue: 365,
   })
   @Column({
     type: ColumnType.Number,
-    default: 90,
+    default: 365,
     nullable: false,
   })
   @ColumnBillingAccessControl({

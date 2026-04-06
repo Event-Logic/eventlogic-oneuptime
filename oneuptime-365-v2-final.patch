@@ -1,0 +1,178 @@
+diff --git a/App/FeatureSet/StatusPage/src/Pages/Overview/Overview.tsx b/App/FeatureSet/StatusPage/src/Pages/Overview/Overview.tsx
+index a45aa21..00711dc 100644
+--- a/App/FeatureSet/StatusPage/src/Pages/Overview/Overview.tsx
++++ b/App/FeatureSet/StatusPage/src/Pages/Overview/Overview.tsx
+@@ -131,7 +131,9 @@ const Overview: FunctionComponent<PageComponentProps> = (
+     scheduledMaintenanceStateTimelines,
+     setScheduledMaintenanceStateTimelines,
+   ] = useState<Array<ScheduledMaintenanceStateTimeline>>([]);
+-  const uptimeHistoryDays: number = statusPage?.showUptimeHistoryInDays || 90;
++  const maxHistoryDays: number = statusPage?.showUptimeHistoryInDays || 365;
++  const [selectedDays, setSelectedDays] = useState<number>(90);
++  const uptimeHistoryDays: number = Math.min(selectedDays, maxHistoryDays);
+   const startDate: Date = OneUptimeDate.getSomeDaysAgo(uptimeHistoryDays);
+   const endDate: Date = OneUptimeDate.getCurrentDate();
+   const [currentStatus, setCurrentStatus] = useState<MonitorStatus | null>(
+@@ -863,6 +865,32 @@ const Overview: FunctionComponent<PageComponentProps> = (
+             )}
+           </div>
+ 
++          {statusPageResources.length > 0 && (
++            <div className="flex justify-end mt-5 mb-0 gap-1">
++              {[30, 90, 365]
++                .filter((days: number) => {
++                  return days <= maxHistoryDays;
++                })
++                .map((days: number) => {
++                  return (
++                    <button
++                      key={days}
++                      onClick={() => {
++                        setSelectedDays(days);
++                      }}
++                      className={`px-3 py-1 text-sm rounded-full border transition-colors ${
++                        selectedDays === days
++                          ? "bg-gray-700 text-white border-gray-700"
++                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
++                      }`}
++                    >
++                      {days}d
++                    </button>
++                  );
++                })}
++            </div>
++          )}
++
+           {statusPageResources.length > 0 && (
+             <div className="bg-white pl-3 pr-3 sm:pl-5 sm:pr-5 mt-5 rounded-xl shadow space-y-3 sm:space-y-5 mb-6">
+               <AccordionGroup>
+diff --git a/Common/Models/DatabaseModels/StatusPage.ts b/Common/Models/DatabaseModels/StatusPage.ts
+index ab75498..5241b97 100755
+--- a/Common/Models/DatabaseModels/StatusPage.ts
++++ b/Common/Models/DatabaseModels/StatusPage.ts
+@@ -2664,12 +2664,12 @@ export default class StatusPage extends BaseModel {
+     type: TableColumnType.Number,
+     title: "Show Uptime History In Days",
+     description:
+-      "How many days of uptime history should be shown on the status page? Maximum is 90 days.",
+-    defaultValue: 90,
++      "How many days of uptime history should be shown on the status page? Maximum is 365 days.",
++    defaultValue: 365,
+   })
+   @Column({
+     type: ColumnType.Number,
+-    default: 90,
++    default: 365,
+     nullable: false,
+   })
+   @ColumnBillingAccessControl({
+diff --git a/Common/Server/API/StatusPageAPI.ts b/Common/Server/API/StatusPageAPI.ts
+index c27bcc9..646bae9 100644
+--- a/Common/Server/API/StatusPageAPI.ts
++++ b/Common/Server/API/StatusPageAPI.ts
+@@ -1176,10 +1176,10 @@ export default class StatusPageAPI extends BaseAPI<
+ 
+           if (
+             OneUptimeDate.getDaysBetweenTwoDatesInclusive(startDate, endDate) >
+-            90
++            365
+           ) {
+             throw new BadDataException(
+-              "You can only get uptime for 90 days. Please select a date range within 90 days.",
++              "You can only get uptime for 365 days. Please select a date range within 365 days.",
+             );
+           }
+ 
+@@ -1460,8 +1460,8 @@ export default class StatusPageAPI extends BaseAPI<
+           let uptimeHistoryDays: number =
+             statusPageForDays?.showUptimeHistoryInDays || 90;
+ 
+-          if (uptimeHistoryDays > 90) {
+-            uptimeHistoryDays = 90;
++          if (uptimeHistoryDays > 365) {
++            uptimeHistoryDays = 365;
+           }
+ 
+           if (uptimeHistoryDays < 1) {
+diff --git a/Common/UI/Components/Graphs/DayUptimeGraph.tsx b/Common/UI/Components/Graphs/DayUptimeGraph.tsx
+index c3f40c2..360463e 100644
+--- a/Common/UI/Components/Graphs/DayUptimeGraph.tsx
++++ b/Common/UI/Components/Graphs/DayUptimeGraph.tsx
+@@ -68,6 +68,9 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
+     });
+   };
+ 
++  // Group bars when there are too many days to display clearly
++  const daysPerBar: number = days > 180 ? 3 : 1;
++
+   type GetUptimeBarFunction = (dayNumber: number) => ReactElement;
+ 
+   const getUptimeBar: GetUptimeBarFunction = (
+@@ -80,8 +83,14 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
+       dayNumber,
+     );
+ 
++    // For grouped bars, the range covers multiple days
++    const lastDayInGroup: Date = OneUptimeDate.getSomeDaysAfterDate(
++      props.startDate,
++      Math.min(dayNumber + daysPerBar - 1, days - 1),
++    );
++
+     const startOfTheDay: Date = OneUptimeDate.getStartOfDay(todaysDay);
+-    const endOfTheDay: Date = OneUptimeDate.getEndOfDay(todaysDay);
++    const endOfTheDay: Date = OneUptimeDate.getEndOfDay(lastDayInGroup);
+ 
+     const todaysEvents: Array<Event> = props.events.filter((event: Event) => {
+       let doesEventBelongsToToday: boolean = false;
+@@ -245,6 +254,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
+         richContent={
+           <UptimeBarTooltip
+             date={todaysDay}
++            endDate={daysPerBar > 1 ? lastDayInGroup : undefined}
+             uptimePercent={uptimePercentForTheDay}
+             hasEvents={hasEvents}
+             statusDurations={statusDurations}
+@@ -275,7 +285,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
+   const getUptimeGraph: GetUptimeGraphFunction = (): Array<ReactElement> => {
+     const elements: Array<ReactElement> = [];
+ 
+-    for (let i: number = 0; i < days; i++) {
++    for (let i: number = 0; i < days; i += daysPerBar) {
+       elements.push(getUptimeBar(i));
+     }
+ 
+diff --git a/Common/UI/Components/Graphs/UptimeBarTooltip.tsx b/Common/UI/Components/Graphs/UptimeBarTooltip.tsx
+index e067407..fb85458 100644
+--- a/Common/UI/Components/Graphs/UptimeBarTooltip.tsx
++++ b/Common/UI/Components/Graphs/UptimeBarTooltip.tsx
+@@ -12,6 +12,7 @@ export interface StatusDuration {
+ 
+ export interface ComponentProps {
+   date: Date;
++  endDate?: Date | undefined;
+   uptimePercent: number;
+   hasEvents: boolean;
+   statusDurations: Array<StatusDuration>;
+@@ -22,9 +23,21 @@ export interface ComponentProps {
+ const UptimeBarTooltip: FunctionComponent<ComponentProps> = (
+   props: ComponentProps,
+ ): ReactElement => {
+-  const dateStr: string =
++  const startDateStr: string =
+     OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(props.date, true);
+ 
++  const showRange: boolean = Boolean(
++    props.endDate &&
++      OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(
++        props.endDate,
++        true,
++      ) !== startDateStr,
++  );
++
++  const dateStr: string = showRange
++    ? `${startDateStr} – ${OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(props.endDate!, true)}`
++    : startDateStr;
++
+   // Color tiers
+   const isGood: boolean = props.uptimePercent >= 99.9;
+   const isWarn: boolean = !isGood && props.uptimePercent >= 99;

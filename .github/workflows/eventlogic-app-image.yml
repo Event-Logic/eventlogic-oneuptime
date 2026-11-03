@@ -68,7 +68,9 @@ jobs:
         with:
           context: .
           file: ./packages/App/Dockerfile
-          target: community-build
+          # "community" is the final stage (CMD, USER node, edition env); community-build
+          # is the intermediate build stage and has no start command.
+          target: community
           platforms: linux/amd64
           push: true
           # The plain tag floats with the branch; the -<sha> tag is unique per build,

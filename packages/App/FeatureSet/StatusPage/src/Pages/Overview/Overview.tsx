@@ -232,14 +232,23 @@ const Overview: FunctionComponent<PageComponentProps> = (
     Array<ScheduledMaintenanceState>
   >([]);
   /*
-   * Clamped to [1, 90] to mirror the server (StatusPageAPI clamps before fetching the
+   * Clamped to [1, 365] to mirror the server (StatusPageAPI clamps before fetching the
    * timeline). showUptimeHistoryInDays has no server-side validation, so an out-of-range
    * value set via the API would otherwise make this window longer than the fetched data
    * range - and the unfetched days would silently count as uptime in the windowed math.
    */
-  const uptimeHistoryDays: number = Math.min(
+  const maxUptimeHistoryDays: number = Math.min(
     Math.max(statusPage?.showUptimeHistoryInDays || 90, 1),
-    90,
+    365,
+  );
+  /*
+   * Event Logic: the visitor picks 30 / 90 / 365 days (never more than the
+   * page allows). Starts at 90, the window the page always showed.
+   */
+  const [selectedUptimeDays, setSelectedUptimeDays] = useState<number>(90);
+  const uptimeHistoryDays: number = Math.min(
+    selectedUptimeDays,
+    maxUptimeHistoryDays,
   );
   /*
    * The history window belongs to the fetched snapshot. Typing must not give
@@ -2036,6 +2045,43 @@ const Overview: FunctionComponent<PageComponentProps> = (
               totalCount={searchResult.totalResourceCount}
               isPending={searchQuery !== deferredSearchQuery}
             />
+          )}
+
+          {/*
+           * Event Logic: how many days of uptime history the strips show.
+           * Only the choices the page allows (showUptimeHistoryInDays) appear.
+           */}
+          {statusPageResources.length > 0 && maxUptimeHistoryDays > 30 && (
+            <div
+              className="flex justify-end mt-5 mb-0 gap-1"
+              role="group"
+              aria-label="Uptime history window"
+            >
+              {[30, 90, 365]
+                .filter((days: number) => {
+                  return days <= maxUptimeHistoryDays;
+                })
+                .map((days: number) => {
+                  const isSelected: boolean = selectedUptimeDays === days;
+                  return (
+                    <button
+                      key={days}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedUptimeDays(days);
+                      }}
+                      className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                        isSelected
+                          ? "bg-gray-700 text-white border-gray-700"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      {days}d
+                    </button>
+                  );
+                })}
+            </div>
           )}
 
           {/*

@@ -26,7 +26,7 @@ import {
  * 89 days before now, so the strip is exactly this many buckets and the last
  * bar is today.
  */
-export const MONITOR_UPTIME_HISTORY_DAYS: number = 90;
+export const MONITOR_UPTIME_HISTORY_DAYS: number = 365;
 
 export enum MonitorUptimeWindowKey {
   Last24Hours = "24h",

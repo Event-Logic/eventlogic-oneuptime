@@ -204,7 +204,7 @@ const SEVERITY_COLORS: Array<string> = [
 const MAX_ERROR_LENGTH: number = 500;
 
 // The most days of uptime a status page shows (StatusPage.showUptimeHistoryInDays).
-const MAX_STATUS_PAGE_UPTIME_HISTORY_DAYS: number = 90;
+const MAX_STATUS_PAGE_UPTIME_HISTORY_DAYS: number = 365;
 
 export default class ToolImportApplier {
   public static async apply(

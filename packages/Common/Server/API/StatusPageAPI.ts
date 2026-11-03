@@ -1697,10 +1697,10 @@ export default class StatusPageAPI extends BaseAPI<
 
           if (
             OneUptimeDate.getDaysBetweenTwoDatesInclusive(startDate, endDate) >
-            90
+            365
           ) {
             throw new BadDataException(
-              "You can only get uptime for 90 days. Please select a date range within 90 days.",
+              "You can only get uptime for 365 days. Please select a date range within 365 days.",
             );
           }
 
@@ -5398,7 +5398,7 @@ export default class StatusPageAPI extends BaseAPI<
     statusPageId: ObjectID;
     /*
      * When omitted, the timeline window is computed from the status page's
-     * own showUptimeHistoryInDays (clamped to 1..90 days, ending now) —
+     * own showUptimeHistoryInDays (clamped to 1..365 days, ending now) —
      * the status page row is fetched below anyway, so callers that want the
      * page-configured window (the overview endpoint) don't need their own
      * StatusPage query just to read that column.
@@ -5466,8 +5466,8 @@ export default class StatusPageAPI extends BaseAPI<
     if (!startDateForMonitorTimeline || !endDateForMonitorTimeline) {
       let uptimeHistoryDays: number = statusPage.showUptimeHistoryInDays || 90;
 
-      if (uptimeHistoryDays > 90) {
-        uptimeHistoryDays = 90;
+      if (uptimeHistoryDays > 365) {
+        uptimeHistoryDays = 365;
       }
 
       if (uptimeHistoryDays < 1) {
@@ -5838,7 +5838,7 @@ export default class StatusPageAPI extends BaseAPI<
      * The timeline window comes from the status page's configured
      * showUptimeHistoryInDays. getStatusPageResourcesAndTimelines
      * fetches the status page row anyway, so let it compute the window
-     * (clamped to 1..90 days, ending now) instead of issuing a separate
+     * (clamped to 1..365 days, ending now) instead of issuing a separate
      * StatusPage query here just to read that one column.
      */
     const {

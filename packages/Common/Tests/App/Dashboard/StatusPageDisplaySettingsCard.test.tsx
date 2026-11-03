@@ -737,7 +737,8 @@ describe("reading the status page", () => {
       "false",
     );
     expect(daysFor("showIncidentHistoryInDays")).toHaveValue(14);
-    expect(daysFor("showUptimeHistoryInDays")).toHaveValue(90);
+    // Event Logic: the model's default is a full year.
+    expect(daysFor("showUptimeHistoryInDays")).toHaveValue(365);
   });
 
   test("a page with no value for any setting shows the overall uptime percentage off, the default", async () => {

@@ -402,19 +402,24 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
       lastDayIndex > firstDayIndex ? lastGraphDay.date : undefined;
 
     /*
-     * The server's readings for the days of this bar, when the caller
-     * supplied them, merged into one. They are matched by instant rather
-     * than by index: the window's first bucket is clipped to the window
-     * start, so bucket i is not necessarily day i.
+     * The server's reading for this day, when the caller supplied one. It is
+     * matched by instant rather than by index: the window's first bucket is
+     * clipped to the window start, so bucket i is not necessarily day i.
+     *
+     * Event Logic: on a grouped bar the readings of all its days are merged
+     * into one. A one-day bar keeps upstream's rule of the first reading
+     * that falls on the day.
      */
-    const todaysReading: DayReading | undefined = mergeDayReadings(
-      (props.dayReadings || []).filter((reading: DayReading) => {
+    const readingsInSpan: Array<DayReading> = (props.dayReadings || []).filter(
+      (reading: DayReading) => {
         return (
           reading.dayStart.getTime() >= startOfTheDay.getTime() &&
           reading.dayStart.getTime() <= endOfTheDay.getTime()
         );
-      }),
+      },
     );
+    const todaysReading: DayReading | undefined =
+      daysPerBar === 1 ? readingsInSpan[0] : mergeDayReadings(readingsInSpan);
 
     const todaysEvents: Array<Event> = props.events.filter((event: Event) => {
       let doesEventBelongsToToday: boolean = false;

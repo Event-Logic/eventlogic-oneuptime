@@ -275,7 +275,16 @@ const Overview: FunctionComponent<PageComponentProps> = (
     useMemo(() => {
       return UptimeDailyAggregateUtil.getWindow(uptimeDailyAggregate);
     }, [uptimeDailyAggregate]);
-  const uptimeStripStartDate: Date = uptimeBucketWindow?.startDate || startDate;
+  /*
+   * Event Logic: the server buckets the page's whole window (up to 365 days),
+   * but the visitor may have picked a shorter one above. The strip then starts
+   * at the visitor's start, which lies inside the bucketed window, so every
+   * bar still lines up with a bucket; only on the full window is it the
+   * buckets' own (clipped) first instant.
+   */
+  const uptimeStripStartDate: Date = uptimeBucketWindow
+    ? OneUptimeDate.getGreaterDate(uptimeBucketWindow.startDate, startDate)
+    : startDate;
   const uptimeStripEndDate: Date = uptimeBucketWindow?.endDate || endDate;
   const uptimeStripTimezone: string | undefined = uptimeBucketWindow
     ? UptimeDailyAggregateUtil.getTimezone(uptimeDailyAggregate)

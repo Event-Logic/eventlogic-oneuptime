@@ -24,7 +24,38 @@ permissions:
   packages: write
 
 jobs:
+  # The suites that cover the Event Logic changes (the uptime strip and its
+  # helpers, the status page display settings) run before any image is built:
+  # a red test means no image. The App's own `npm run compile` runs inside the
+  # Docker build, so the type-check is covered there.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: Install Common
+        working-directory: packages/Common
+        run: npm ci --no-audit --no-fund
+
+      - name: Write the test config.env (as packages/Common/test-setup.sh does, without starting Postgres/Valkey; these suites use neither)
+        run: |
+          sed -n '/^cat <<EOL > config.env/,/^EOL/p' packages/Common/test-setup.sh | sed '1d;$d' | grep -v BILLING_PRIVATE_KEY > config.env
+          node ./Scripts/Install/MergeEnvTemplate.js
+
+      - name: Test the uptime strip, its helpers and the status page display settings
+        working-directory: packages/Common
+        run: |
+          export $(grep -v '^#' ../../config.env | xargs)
+          node --max-old-space-size=4096 node_modules/.bin/jest \
+            Tests/UI/Components/Graphs Tests/Utils/Uptime Tests/App/Dashboard/StatusPageDisplaySettingsCard \
+            --forceExit --maxWorkers=2
+
   app-image:
+    needs: verify
     runs-on: ubuntu-latest
     env:
       CI_PIPELINE_ID: ${{ github.run_number }} # tells prerun's configure.sh it is in CI (no git pull)

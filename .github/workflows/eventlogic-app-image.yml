@@ -35,9 +35,9 @@ jobs:
         with:
           node-version: 26
 
-      - name: Set up gomplate
-        uses: ./.github/actions/setup-gomplate
-
+      # `npm run prerun` (Scripts/Install/configure.sh) installs gomplate itself when
+      # it is missing and renders every Dockerfile.tpl, so no local action is needed
+      # and the job works from any ref.
       - name: Generate Dockerfiles from Dockerfile.tpl
         run: npm run prerun
 

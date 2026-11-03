@@ -375,6 +375,7 @@ const MonitorOverview: FunctionComponent<ComponentProps> = (
       {selectedDay && (
         <UptimeBarDayModal
           date={selectedDay}
+          endDate={selectedDaySummary?.endDate}
           incidents={selectedDayIncidents}
           uptimePercent={selectedDaySummary?.uptimePercent}
           hasEvents={selectedDaySummary?.hasEvents}

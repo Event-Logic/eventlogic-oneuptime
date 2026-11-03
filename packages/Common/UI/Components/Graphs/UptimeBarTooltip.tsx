@@ -68,6 +68,8 @@ const getEventEdgeStyle: (color: string) => React.CSSProperties = (
 
 export interface ComponentProps {
   date: Date;
+  /* Event Logic: the last day of a bar that spans several days. */
+  endDate?: Date | undefined;
   uptimePercent: number;
   hasEvents: boolean;
   statusDurations: Array<StatusDuration>;
@@ -104,6 +106,7 @@ const UptimeBarTooltip: FunctionComponent<ComponentProps> = (
   };
   const dateStr: string = DayUptimeGraphUtil.formatDayLabel({
     date: props.date,
+    endDate: props.endDate,
     timezone: props.timezone,
   });
 

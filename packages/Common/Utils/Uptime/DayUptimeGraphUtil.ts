@@ -366,8 +366,27 @@ export default class DayUptimeGraphUtil {
    */
   public static formatDayLabel(data: {
     date: Date;
+    /*
+     * Event Logic: the last day of a bar that spans several days. The label
+     * then names the span, "Mar 01, 2026 – Mar 04, 2026", and is the single
+     * day's label when both days read the same.
+     */
+    endDate?: Date | undefined;
     timezone?: string | undefined;
   }): string {
+    if (data.endDate) {
+      const first: string = this.formatDayLabel({
+        date: data.date,
+        timezone: data.timezone,
+      });
+      const last: string = this.formatDayLabel({
+        date: data.endDate,
+        timezone: data.timezone,
+      });
+
+      return first === last ? first : `${first} – ${last}`;
+    }
+
     if (!this.isValidTimezone(data.timezone)) {
       return OneUptimeDate.getDateAsUserFriendlyLocalFormattedString(
         data.date,

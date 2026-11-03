@@ -23,6 +23,8 @@ import React, { FunctionComponent, ReactElement } from "react";
 
 export interface ComponentProps {
   date: Date;
+  /* Event Logic: the last day of a bar that spans several days. */
+  endDate?: Date | undefined;
   incidents: Array<UptimeBarTooltipIncident>;
   onClose: () => void;
   onIncidentClick?: ((incidentId: string) => void) | undefined;
@@ -65,6 +67,7 @@ const UptimeBarDayModal: FunctionComponent<ComponentProps> = (
 ): ReactElement => {
   const dateStr: string = DayUptimeGraphUtil.formatDayLabel({
     date: props.date,
+    endDate: props.endDate,
     timezone: props.timezone,
   });
 

@@ -45,6 +45,8 @@ export interface BarChartRule {
  */
 export interface UptimeBarDaySummary {
   date: Date;
+  /* Event Logic: the last day of a bar that spans several days. */
+  endDate?: Date | undefined;
   uptimePercent: number;
   hasEvents: boolean;
   statusDurations: Array<StatusDuration>;
@@ -196,6 +198,67 @@ const getReadingBarColor: GetReadingBarColorFunction = (
   return longestDowntime ? longestDowntime.color : defaultBarColor;
 };
 
+/*
+ * Event Logic: the most bars one strip draws. A 365-day window is 365
+ * hairlines at status-page width, unreadable and unhoverable, so above this
+ * many days consecutive days share one bar (three per bar for a year). A
+ * window of up to this many days keeps one bar per day, exactly as before.
+ */
+export const MAX_BARS_PER_STRIP: number = 122;
+
+type MergeDayReadingsFunction = (
+  readings: Array<DayReading>,
+) => DayReading | undefined;
+
+/*
+ * One reading for a bar that spans several days: coverage adds up, and the
+ * time spent in each status adds up across the days (matched by label, which
+ * is what the tooltip lists them by). A single day's reading is returned as
+ * it is, so a one-day bar is untouched.
+ */
+const mergeDayReadings: MergeDayReadingsFunction = (
+  readings: Array<DayReading>,
+): DayReading | undefined => {
+  if (readings.length === 0) {
+    return undefined;
+  }
+
+  if (readings.length === 1) {
+    return readings[0];
+  }
+
+  const durationsByLabel: Dictionary<StatusDuration> = {};
+  const statusDurations: Array<StatusDuration> = [];
+  let daySeconds: number = 0;
+  let coveredSeconds: number = 0;
+
+  for (const reading of readings) {
+    daySeconds += reading.daySeconds;
+    coveredSeconds += reading.coveredSeconds;
+
+    for (const duration of reading.statusDurations) {
+      const merged: StatusDuration | undefined =
+        durationsByLabel[duration.label];
+
+      if (merged) {
+        merged.seconds += duration.seconds;
+        continue;
+      }
+
+      const copy: StatusDuration = { ...duration };
+      durationsByLabel[duration.label] = copy;
+      statusDurations.push(copy);
+    }
+  }
+
+  return {
+    dayStart: readings[0]!.dayStart,
+    daySeconds: daySeconds,
+    coveredSeconds: coveredSeconds,
+    statusDurations: statusDurations,
+  };
+};
+
 const DayUptimeGraph: FunctionComponent<ComponentProps> = (
   props: ComponentProps,
 ): ReactElement => {
@@ -208,6 +271,16 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
   }, [props.startDate, props.endDate, props.timezone]);
 
   const days: number = graphDays.length;
+
+  /*
+   * Event Logic: how many days each bar stands for (see MAX_BARS_PER_STRIP),
+   * and how many bars that makes. The last bar may be shorter.
+   */
+  const daysPerBar: number = Math.max(
+    1,
+    Math.ceil(days / MAX_BARS_PER_STRIP),
+  );
+  const barCount: number = Math.ceil(days / daysPerBar);
 
   /*
    * One reading of the clock for every bar: an event in progress belongs to
@@ -251,7 +324,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
 
   const activeBarIndex: number = DayUptimeGraphUtil.getActiveBarIndex({
     storedIndex: focusedBarIndex,
-    barCount: days,
+    barCount: barCount,
   });
 
   type MoveFocusFunction = (event: React.KeyboardEvent, index: number) => void;
@@ -263,7 +336,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
     const nextIndex: number | null = DayUptimeGraphUtil.getNextFocusIndex({
       key: event.key,
       currentIndex: index,
-      barCount: days,
+      barCount: barCount,
     });
 
     if (nextIndex === null) {
@@ -308,25 +381,40 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
   ): ReactElement => {
     let color: Color = props.defaultBarColor || Green;
 
-    const graphDay: UptimeGraphDay = graphDays[dayNumber]!;
+    /*
+     * Event Logic: the bar stands for graphDays[first..last] - one day when
+     * daysPerBar is 1, several on a long window. Everything below reads the
+     * span's bounds, so the events, incidents and maintenance of every day in
+     * the span belong to the bar, and the tooltip names the span.
+     */
+    const firstDayIndex: number = dayNumber * daysPerBar;
+    const lastDayIndex: number = Math.min(
+      firstDayIndex + daysPerBar - 1,
+      days - 1,
+    );
+    const graphDay: UptimeGraphDay = graphDays[firstDayIndex]!;
+    const lastGraphDay: UptimeGraphDay = graphDays[lastDayIndex]!;
 
     const todaysDay: Date = graphDay.date;
     const startOfTheDay: Date = graphDay.startOfDay;
-    const endOfTheDay: Date = graphDay.endOfDay;
+    const endOfTheDay: Date = lastGraphDay.endOfDay;
+    const spanEndDay: Date | undefined =
+      lastDayIndex > firstDayIndex ? lastGraphDay.date : undefined;
 
     /*
-     * The server's reading for this day, when the caller supplied one. It is
-     * matched by instant rather than by index: the window's first bucket is
-     * clipped to the window start, so bucket i is not necessarily day i.
+     * The server's readings for the days of this bar, when the caller
+     * supplied them, merged into one. They are matched by instant rather
+     * than by index: the window's first bucket is clipped to the window
+     * start, so bucket i is not necessarily day i.
      */
-    const todaysReading: DayReading | undefined = (
-      props.dayReadings || []
-    ).find((reading: DayReading) => {
-      return (
-        reading.dayStart.getTime() >= startOfTheDay.getTime() &&
-        reading.dayStart.getTime() <= endOfTheDay.getTime()
-      );
-    });
+    const todaysReading: DayReading | undefined = mergeDayReadings(
+      (props.dayReadings || []).filter((reading: DayReading) => {
+        return (
+          reading.dayStart.getTime() >= startOfTheDay.getTime() &&
+          reading.dayStart.getTime() <= endOfTheDay.getTime()
+        );
+      }),
+    );
 
     const todaysEvents: Array<Event> = props.events.filter((event: Event) => {
       let doesEventBelongsToToday: boolean = false;
@@ -632,6 +720,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
 
     const summary: UptimeBarDaySummary = {
       date: todaysDay,
+      endDate: spanEndDay,
       uptimePercent: uptimePercentForTheDay,
       hasEvents: hasEvents,
       statusDurations: statusDurations,
@@ -642,6 +731,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
     const ariaLabel: string = DayUptimeGraphUtil.getDayAriaLabel({
       dateLabel: DayUptimeGraphUtil.formatDayLabel({
         date: todaysDay,
+        endDate: spanEndDay,
         timezone: props.timezone,
       }),
       hasEvents: hasEvents,
@@ -658,6 +748,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
         richContent={
           <UptimeBarTooltip
             date={todaysDay}
+            endDate={spanEndDay}
             timezone={props.timezone}
             uptimePercent={uptimePercentForTheDay}
             hasEvents={hasEvents}
@@ -733,7 +824,7 @@ const DayUptimeGraph: FunctionComponent<ComponentProps> = (
   const getUptimeGraph: GetUptimeGraphFunction = (): Array<ReactElement> => {
     const elements: Array<ReactElement> = [];
 
-    for (let i: number = 0; i < days; i++) {
+    for (let i: number = 0; i < barCount; i++) {
       elements.push(getUptimeBar(i));
     }
 

@@ -47,9 +47,11 @@ jobs:
           VERSION="$(tr -d ' \n' < VERSION)"
           TAG="${{ github.event.inputs.tag }}"
           if [ -z "$TAG" ]; then TAG="${VERSION}-365"; fi
+          SHA_TAG="${TAG}-$(echo "${{ github.sha }}" | cut -c1-7)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Building app ${VERSION} as ghcr.io/event-logic/oneuptime-app:${TAG}"
+          echo "sha_tag=$SHA_TAG" >> "$GITHUB_OUTPUT"
+          echo "Building app ${VERSION} as ghcr.io/event-logic/oneuptime-app:${TAG} (also :${SHA_TAG})"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,8 +71,11 @@ jobs:
           target: community-build
           platforms: linux/amd64
           push: true
+          # The plain tag floats with the branch; the -<sha> tag is unique per build,
+          # so pointing image.overrides.app at it always rolls the Deployment.
           tags: |
             ghcr.io/event-logic/oneuptime-app:${{ steps.meta.outputs.tag }}
+            ghcr.io/event-logic/oneuptime-app:${{ steps.meta.outputs.sha_tag }}
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
             GIT_SHA=${{ github.sha }}

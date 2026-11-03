@@ -254,7 +254,8 @@ export const DISPLAY_DAYS_SENTENCE: PluralTemplate = {
 };
 
 // The uptime bars cover at most this many days (the API clamps to it too).
-export const MAX_UPTIME_HISTORY_DAYS: number = 90;
+// Event Logic: a full year, matching MONITOR_UPTIME_HISTORY_DAYS and the API clamp.
+export const MAX_UPTIME_HISTORY_DAYS: number = 365;
 
 const WHOLE_NUMBER: RegExp = /^\d+$/;
 
@@ -465,7 +466,7 @@ export const getDisplaySettingsSelect: () => Select<StatusPage> =
 
 /*
  * The value a column holds on a page that has none for it: the model's own
- * default (true for the four lists, 14 days, 90 days of uptime, two
+ * default (true for the four lists, 14 days, 365 days of uptime, two
  * decimals ...), the same one the server stores for a new status page.
  *
  * A list of statuses has none: the server fills a new page's from the

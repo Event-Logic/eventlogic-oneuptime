@@ -1314,22 +1314,22 @@ describe("how many days", () => {
     },
   );
 
-  test("uptime history stops at 90 days, the most the bars cover", async () => {
+  test("uptime history stops at 365 days, the most the bars cover", async () => {
     await renderCard();
     await loaded();
 
-    expect(daysDefinitionOf("showUptimeHistoryInDays").maxDays).toBe(90);
+    expect(daysDefinitionOf("showUptimeHistoryInDays").maxDays).toBe(365);
 
-    await typeDays("showUptimeHistoryInDays", "91");
+    await typeDays("showUptimeHistoryInDays", "366");
 
     expect(updateByIdMock).not.toHaveBeenCalled();
     expect(
       screen.getByTestId(
         `${getDisplayDaysTestId("showUptimeHistoryInDays")}-error`,
       ),
-    ).toHaveTextContent("Enter a whole number of days between 1 and 90.");
+    ).toHaveTextContent("Enter a whole number of days between 1 and 365.");
 
-    await typeDays("showUptimeHistoryInDays", "90");
+    await typeDays("showUptimeHistoryInDays", "365");
     await typeDays("showUptimeHistoryInDays", "30");
 
     await waitFor(() => {
@@ -1363,7 +1363,7 @@ describe("how many days", () => {
     ).toBeInTheDocument();
 
     const description: HTMLElement = within(section).getByText(
-      "How many days the uptime bars and uptime percentages cover, up to 90.",
+      "How many days the uptime bars and uptime percentages cover, up to 365.",
     );
 
     expect(

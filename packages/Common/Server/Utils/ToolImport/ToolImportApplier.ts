@@ -720,7 +720,7 @@ class ApplyRun {
       page.pageDescription = source.pageDescription;
     }
 
-    // The days of uptime the page shows, up to the 90 a status page can.
+    // The days of uptime the page shows, up to the 365 a status page can.
     if (source.historyDays && source.historyDays > 0) {
       page.showUptimeHistoryInDays = Math.min(
         MAX_STATUS_PAGE_UPTIME_HISTORY_DAYS,
